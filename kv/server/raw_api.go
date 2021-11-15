@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/pingcap-incubator/tinykv/kv/storage"
 	"github.com/pingcap-incubator/tinykv/proto/pkg/kvrpcpb"
 )
 
@@ -27,6 +28,9 @@ func (server *Server) RawGet(_ context.Context, req *kvrpcpb.RawGetRequest) (*kv
 		Value:    rawResult,
 		NotFound: false,
 	}
+	if rawResult == nil {
+		result.NotFound = true
+	}
 	return result, nil
 }
 
@@ -34,6 +38,18 @@ func (server *Server) RawGet(_ context.Context, req *kvrpcpb.RawGetRequest) (*kv
 func (server *Server) RawPut(_ context.Context, req *kvrpcpb.RawPutRequest) (*kvrpcpb.RawPutResponse, error) {
 	// Your Code Here (1).
 	// Hint: Consider using Storage.Modify to store data to be modified
+	err := server.storage.Write(nil, []storage.Modify{
+		{
+			Data: storage.Put{
+				Cf:    req.GetCf(),
+				Key:   req.GetKey(),
+				Value: req.GetValue(),
+			},
+		},
+	})
+	if err != nil {
+		return &kvrpcpb.RawPutResponse{Error: err.Error()}, err
+	}
 	return nil, nil
 }
 
